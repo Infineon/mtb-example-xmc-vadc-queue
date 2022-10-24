@@ -12,7 +12,7 @@
 *
 ********************************************************************************
 *
-* Copyright (c) 2015-2020, Infineon Technologies AG
+* Copyright (c) 2015-2022, Infineon Technologies AG
 * All rights reserved.
 *
 * Boost Software License - Version 1.0 - August 17th, 2003
@@ -42,9 +42,16 @@
 *******************************************************************************/
 #include "cybsp.h"
 #include "cy_utils.h"
-#include <xmc_vadc.h>
 #include <stdio.h>
-#include "retarget_io.h"
+#include "cy_retarget_io.h"
+#include <xmc_vadc.h>
+
+#define ENABLE_XMC_DEBUG_PRINT (0)
+
+#if ENABLE_XMC_DEBUG_PRINT
+static bool LOOP_ENTER = false;
+#endif
+
 
 /*******************************************************************************
 * Data Structures
@@ -127,6 +134,7 @@ const XMC_VADC_QUEUE_ENTRY_t g_queue_entry_3_handle =
     .generate_interrupt = 0,  /* Interrupt generate disabled */
 };
 
+
 /*******************************************************************************
 * Global Variable
 *******************************************************************************/
@@ -183,8 +191,8 @@ int main(void)
     }
 
     /* Initialize retarget-io to use the debug UART port */
-    retarget_io_init();
-    printf("ADC Conversion starts \r\n");
+    cy_retarget_io_init(CYBSP_DEBUG_UART_HW);
+    printf("ADC Conversion starts\r\n");
 
     /* Initialize an instance of Global hardware */
     XMC_VADC_GLOBAL_Init(VADC, &g_global_handle);
@@ -228,10 +236,17 @@ int main(void)
         adc_result[2] = XMC_VADC_GROUP_GetResult(VADC_G0, 3);
         adc_result[3] = XMC_VADC_GROUP_GetResult(VADC_G0, 5);
 
+    #if ENABLE_XMC_DEBUG_PRINT
+        if(!LOOP_ENTER)
+        {
+        printf("Conversion complete\r\n");
+        LOOP_ENTER = true;
+        }
+    #else
         /* Print the result values */
         printf("ADC result value of channel 1: %x, channel 3: %x and channel 5: %x \r\n", adc_result[1], adc_result[2], adc_result[3]);
+    #endif
     }
     return 1;
 }
-
 /* [] END OF FILE */

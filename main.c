@@ -40,11 +40,11 @@
 * DEALINGS IN THE SOFTWARE.
 *
 *******************************************************************************/
+
 #include "cybsp.h"
 #include "cy_utils.h"
 #include <stdio.h>
 #include "cy_retarget_io.h"
-#include <xmc_vadc.h>
 
 #define ENABLE_XMC_DEBUG_PRINT (0)
 
@@ -52,114 +52,10 @@
 static bool LOOP_ENTER = false;
 #endif
 
-
-/*******************************************************************************
-* Data Structures
-*******************************************************************************/
-/* Initialization data of a VADC Global */
-const XMC_VADC_GLOBAL_CONFIG_t g_global_handle = { };
-
-/* Initialization data of a VADC Group */
-const XMC_VADC_GROUP_CONFIG_t g_group_handle = { };
-
-/* Data configuration for queue source. The trigger input A is used to
- * trigger the conversion on any edge
- */
-const XMC_VADC_QUEUE_CONFIG_t g_queue_handle =
-{
-    .trigger_signal   = XMC_VADC_REQ_TR_A,          /* Select XMC_VADC_REQ_TR_A
-                                                       trigger signal */
-    .trigger_edge     = XMC_VADC_TRIGGER_EDGE_ANY,  /* Trigger edge any */
-    .external_trigger = 1                           /* External trigger enabled */
-};
-
-/* Channel data configuration. Channels do NOT use alias feature and use
- * desired result registers.
- */
-const XMC_VADC_CHANNEL_CONFIG_t g_g0_ch0_handle =
-{
-    .alias_channel     = XMC_VADC_CHANNEL_ALIAS_DISABLED, /* ALIAS is Disabled */
-    .result_reg_number = 0,                               /* Result Register number */
-};
-const XMC_VADC_CHANNEL_CONFIG_t g_g0_ch1_handle =
-{
-    .alias_channel     = XMC_VADC_CHANNEL_ALIAS_DISABLED, /* ALIAS is Disabled */
-    .result_reg_number = 1,                               /* Result Register number */
-};
-const XMC_VADC_CHANNEL_CONFIG_t g_g0_ch3_handle =
-{
-    .alias_channel     = XMC_VADC_CHANNEL_ALIAS_DISABLED, /* ALIAS is Disabled */
-    .result_reg_number = 3,                               /* Result Register number */
-};
-const XMC_VADC_CHANNEL_CONFIG_t g_g0_ch5_handle =
-{
-    .alias_channel     = XMC_VADC_CHANNEL_ALIAS_DISABLED, /* ALIAS is Disabled */
-    .result_reg_number = 5,                               /* Result Register number */
-};
-
-/* Queue entry configuration. For each entry a channel is configured. Entry
- * 1 to 3 are configured to be refilled automatically. Entry 0 and 3 can
- * be triggered externally and entry 0 generates an event after conversion.
- */
-/* Queue entry configuration for channel 0 */
-const XMC_VADC_QUEUE_ENTRY_t g_queue_entry_0_handle =
-{
-    .channel_num        = 0,  /* Channel number */
-    .refill_needed      = 0,  /* Refill disabled */
-    .external_trigger   = 1,  /* External trigger enabled */
-    .generate_interrupt = 1,  /* Interrupt generate enabled */
-};
-/* Queue entry configuration for channel 3 */
-const XMC_VADC_QUEUE_ENTRY_t g_queue_entry_1_handle =
-{
-    .channel_num        = 3,  /* Channel number */
-    .refill_needed      = 1,  /* Refill enabled */
-    .external_trigger   = 0,  /* External trigger disabled */
-    .generate_interrupt = 0,  /* Interrupt generate disabled */
-};
-/* Queue entry configuration for channel 5 */
-const XMC_VADC_QUEUE_ENTRY_t g_queue_entry_2_handle =
-{
-    .channel_num        = 5,  /* Channel number */
-    .refill_needed      = 1,  /* Refill enabled */
-    .external_trigger   = 0,  /* External trigger disabled */
-    .generate_interrupt = 0,  /* Interrupt generate disabled */
-};
-/* Queue entry configuration for channel 1 */
-const XMC_VADC_QUEUE_ENTRY_t g_queue_entry_3_handle =
-{
-    .channel_num        = 1,  /* Channel number */
-    .refill_needed      = 1,  /* Refill enabled */
-    .external_trigger   = 1,  /* External trigger disabled */
-    .generate_interrupt = 0,  /* Interrupt generate disabled */
-};
-
-
 /*******************************************************************************
 * Global Variable
 *******************************************************************************/
 XMC_VADC_RESULT_SIZE_t adc_result[16] = { 0 };
-
-/*******************************************************************************
-* Function Name: VADC0_G0_0_IRQHandler
-********************************************************************************
-* Summary:
-* This function handles the SR0 of the Group 0.
-* It is activated with XMC_VADC_GROUP_ScanInit().
-*
-* Parameters:
-*  none
-*
-* Return:
-*  none
-*
-*******************************************************************************/
-void VADC0_G0_0_IRQHandler(void)
-{
-    /* Retrieve result from result register. */
-    adc_result[0] = XMC_VADC_GROUP_GetResult(VADC_G0, 0);
-    printf(" Interrupt Generated: Adc result value of channel 0: %x \r\n", adc_result[0]);
-}
 
 /*******************************************************************************
 * Function Name: main
@@ -194,41 +90,6 @@ int main(void)
     cy_retarget_io_init(CYBSP_DEBUG_UART_HW);
     printf("ADC Conversion starts\r\n");
 
-    /* Initialize an instance of Global hardware */
-    XMC_VADC_GLOBAL_Init(VADC, &g_global_handle);
-
-    /* Initialize the Group */
-    XMC_VADC_GROUP_Init(VADC_G0, &g_group_handle);
-
-    /* Set VADC group to normal operation mode (VADC kernel) */
-    XMC_VADC_GROUP_SetPowerMode(VADC_G0, XMC_VADC_GROUP_POWERMODE_NORMAL);
-
-    /* Calibrate the VADC. Make sure you do this after all used VADC groups
-     * are set to normal operation mode */
-    XMC_VADC_GLOBAL_StartupCalibration(VADC);
-
-    /* Initialize the queue source hardware. The gating mode is set to
-     * ignore to pass external triggers unconditionally */
-    XMC_VADC_GROUP_QueueInit(VADC_G0, &g_queue_handle);
-
-    /* Initialize the channel units */
-    XMC_VADC_GROUP_ChannelInit(VADC_G0, 0, &g_g0_ch0_handle);
-    XMC_VADC_GROUP_ChannelInit(VADC_G0, 1, &g_g0_ch1_handle);
-    XMC_VADC_GROUP_ChannelInit(VADC_G0, 3, &g_g0_ch3_handle);
-    XMC_VADC_GROUP_ChannelInit(VADC_G0, 5, &g_g0_ch5_handle);
-
-    /* Add a queue node to the tail of the queue */
-    XMC_VADC_GROUP_QueueInsertChannel(VADC_G0, g_queue_entry_0_handle);
-    XMC_VADC_GROUP_QueueInsertChannel(VADC_G0, g_queue_entry_1_handle);
-    XMC_VADC_GROUP_QueueInsertChannel(VADC_G0, g_queue_entry_2_handle);
-    XMC_VADC_GROUP_QueueInsertChannel(VADC_G0, g_queue_entry_3_handle);
-
-    /* Start the timer counting operation */
-    XMC_CCU4_SLICE_StartTimer(PWM_0_HW);
-
-    /* Enable NVIC nodes */
-    NVIC_EnableIRQ(VADC0_G0_0_IRQn);
-
     while (1U)
     {
         /* Retrieve result from result register. */
@@ -245,6 +106,7 @@ int main(void)
     #else
         /* Print the result values */
         printf("ADC result value of channel 1: %x, channel 3: %x and channel 5: %x \r\n", adc_result[1], adc_result[2], adc_result[3]);
+        XMC_Delay(500);
     #endif
     }
     return 1;

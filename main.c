@@ -92,10 +92,22 @@ int main(void)
 
     while (1U)
     {
+    #if (UC_SERIES == XMC43)
+        /* Retrieve result from result register. */
+        adc_result[1] = XMC_VADC_GROUP_GetResult(VADC_G0, 1);
+        adc_result[2] = XMC_VADC_GROUP_GetResult(VADC_G0, 2);
+        adc_result[3] = XMC_VADC_GROUP_GetResult(VADC_G0, 4);
+    #elif (UC_SERIES == XMC42)
+        /* Retrieve result from result register. */
+        adc_result[1] = XMC_VADC_GROUP_GetResult(VADC_G0, 1);
+        adc_result[2] = XMC_VADC_GROUP_GetResult(VADC_G0, 4);
+        adc_result[3] = XMC_VADC_GROUP_GetResult(VADC_G0, 5);
+    #else
         /* Retrieve result from result register. */
         adc_result[1] = XMC_VADC_GROUP_GetResult(VADC_G0, 1);
         adc_result[2] = XMC_VADC_GROUP_GetResult(VADC_G0, 3);
         adc_result[3] = XMC_VADC_GROUP_GetResult(VADC_G0, 5);
+    #endif
 
     #if ENABLE_XMC_DEBUG_PRINT
         if(!LOOP_ENTER)
@@ -104,11 +116,20 @@ int main(void)
         LOOP_ENTER = true;
         }
     #else
+        #if (UC_SERIES == XMC43)
+        /* Print the result values */
+        printf("ADC result value of channel 1: %x, channel 2: %x and channel 4: %x \r\n", adc_result[1], adc_result[2], adc_result[3]);
+        XMC_Delay(500);
+        #elif (UC_SERIES == XMC42)
+        /* Print the result values */
+        printf("ADC result value of channel 1: %x, channel 4: %x and channel 5: %x \r\n", adc_result[1], adc_result[2], adc_result[3]);
+        XMC_Delay(500);
+        #else
         /* Print the result values */
         printf("ADC result value of channel 1: %x, channel 3: %x and channel 5: %x \r\n", adc_result[1], adc_result[2], adc_result[3]);
         XMC_Delay(500);
+        #endif
     #endif
     }
-    return 1;
 }
 /* [] END OF FILE */
